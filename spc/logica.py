@@ -28,6 +28,17 @@ SIGNIFICA = {
     5: 'Tendencia: desgaste de herramienta o calentamiento de la máquina.',
 }
 
+# Versiones cortas, para las tarjetas: el texto largo queda en el apartado del punto.
+REGLAS_CORTO = {1: 'Fuera de límites', 2: '2 de 3 cerca del límite', 3: '4 de 5 alejados del centro',
+                4: '8 del mismo lado', 5: '6 subiendo o bajando'}
+REVISAR = {
+    1: 'material, un golpe o la medición',
+    2: 'el ajuste, antes de que salga pieza mala',
+    3: 'desgaste, temperatura o el último ajuste',
+    4: 'lote de material, operador o herramienta',
+    5: 'desgaste de herramienta o máquina calentándose',
+}
+
 
 @dataclass
 class Punto:
@@ -73,6 +84,8 @@ class Veredicto:
     capaz: str | None  # 'si', 'justo', 'no' o None sin tolerancia
     senales: int
     texto: str
+    titulo: str = ''  # «Fuera de control»
+    detalle: str = ''  # «6 señales · cumple la tolerancia con margen»
 
 
 def promedio(v: list[float]) -> float:
@@ -169,7 +182,35 @@ def veredicto(g: Grafica, cap: Capacidad | None) -> Veredicto:
     y = ', aunque todavía' if not control and capaz != 'no' else ' y'
     b = {None: '', 'si': f'{y} cumple la tolerancia con margen.', 'justo': f'{y} cumple la tolerancia, pero justo.',
          'no': ' y no alcanza la tolerancia: saldrán piezas malas.'}[capaz]
-    return Veredicto(control, capaz, senales, a + b)
+    titulo = 'Bajo control' if control else 'Fuera de control'
+    partes = [] if control else [f"{senales} {'señal' if senales == 1 else 'señales'}"]
+    partes += [{None: '', 'si': 'cumple la tolerancia con margen', 'justo': 'cumple la tolerancia, pero justo',
+                'no': 'no alcanza la tolerancia'}[capaz]]
+    return Veredicto(control, capaz, senales, a + b, titulo, ' · '.join(p for p in partes if p) or 'sin tolerancia puesta')
+
+
+# Cuál regla explica mejor lo que pasa: un patrón (tendencia, corrimiento) dice la causa; un punto fuera sólo avisa.
+PRIORIDAD = [5, 4, 3, 2, 1]
+
+
+def regla_principal(reglas: list[int]) -> int | None:
+    return next((r for r in PRIORIDAD if r in reglas), None)
+
+
+def resumen(g: Grafica) -> str:
+    """Una frase con lo que pasa y qué revisar: «Desde la muestra 20 sube sin parar. Revisa desgaste…»."""
+    marcados = [i for i, p in enumerate(g.puntos) if p.reglas]
+    if not marcados:
+        return 'Ningún patrón raro: sigue midiendo con los mismos límites.' if not g.rango_fuera else             'Hay muestras con piezas dispares: revisa sujeción, material o medición.'
+    todas = [r for i in marcados for r in g.puntos[i].reglas]
+    r = regla_principal(todas)
+    desde = g.puntos[marcados[0]]
+    arriba = sum(g.puntos[i].valor > g.lc for i in marcados) >= len(marcados) / 2
+    frase = {5: 'sube sin parar' if arriba else 'baja sin parar', 4: 'se corrió hacia ' + ('arriba' if arriba else 'abajo'),
+             3: 'se corrió un poco hacia ' + ('arriba' if arriba else 'abajo'), 2: 'se acerca al límite',
+             1: 'hay puntos fuera de los límites'}[r]
+    quien = 'muestra' if g.modo == 'Xbar-R' else 'medición'
+    return f'Desde la {quien} {desde.etiqueta} {frase}. Revisa {REVISAR[r]}.'
 
 
 def csv_ejemplo() -> str:
@@ -197,5 +238,5 @@ def csv_ejemplo() -> str:
 
 EJEMPLO = dict(lie=24.95, lse=25.05, unidad='mm', nombre='Diámetro de buje', base=15)
 
-__all__ = ['Grafica', 'Punto', 'Capacidad', 'Veredicto', 'REGLAS', 'SIGNIFICA', 'EJEMPLO', 'aplicar_reglas',
+__all__ = ['Grafica', 'Punto', 'Capacidad', 'Veredicto', 'REGLAS', 'SIGNIFICA', 'REGLAS_CORTO', 'REVISAR', 'regla_principal', 'resumen', 'EJEMPLO', 'aplicar_reglas',
            'construir', 'capacidad', 'veredicto', 'csv_ejemplo', 'replace']

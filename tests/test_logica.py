@@ -71,3 +71,10 @@ def test_comas_decimales_y_punto_y_coma():
     assert t.columnas[medida] == 'espesor' and grupo is None
     assert [v for _, [v] in grupos(t, medida, grupo)] == [2.51, 2.49, 2.50, 2.52, 2.48]
 
+
+def test_resumen_dice_la_causa_y_no_solo_el_aviso():
+    t = leer_texto(csv_ejemplo())
+    g = construir(grupos(t, *sugerir(t)), EJEMPLO['base'])
+    from spc.logica import resumen
+    # La regla 1 sólo avisa; la 4 (8 del mismo lado) dice que el centro se movió: esa manda en la frase.
+    assert resumen(g) == 'Desde la muestra 20 se corrió hacia arriba. Revisa lote de material, operador o herramienta.'
