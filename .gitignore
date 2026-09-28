@@ -4,3 +4,7 @@ dist/
 .vercel/
 .env*
 .meta.json
+__pycache__/
+.pytest_cache/
+build/
+*.spec.bak

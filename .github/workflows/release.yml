@@ -1,0 +1,23 @@
+# Al subir una etiqueta v*, arma el .exe de Windows y lo cuelga en Releases.
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest -q
+        env:
+          QT_QPA_PLATFORM: offscreen
+      - run: pyinstaller --noconfirm --onefile --windowed --name GraficasDeControl --icon assets/icono.ico --add-data "assets;assets" --exclude-module tkinter main.py
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/GraficasDeControl.exe

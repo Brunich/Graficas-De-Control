@@ -4,53 +4,56 @@
 
 *Saber si la máquina se está desajustando antes de que salga pieza mala.*
 
-Subes las mediciones de una pieza y dice si el proceso está bajo control, qué puntos avisan que algo cambió y si alcanza la tolerancia (Cp y Cpk). En palabras, con qué revisar primero.
+App de escritorio para Windows. Abres las mediciones de una pieza (CSV o Excel) y te dice si el proceso está bajo control, qué puntos avisan que algo cambió y si alcanza la tolerancia (Cp y Cpk). Todo en palabras y con qué revisar primero.
 
-![Captura de Gráficas de control (SPC)](docs/captura.png)
+![Gráficas de control: app de escritorio](docs/captura.png)
 
-**Pruébalo en vivo:** [bruno-portfolio-azure.vercel.app/proyectos/graficas-de-control](https://bruno-portfolio-azure.vercel.app/proyectos/graficas-de-control)
+**Descargar:** el `.exe` está en [Releases](https://github.com/Brunich/graficas-de-control/releases). No necesita instalar nada.
 
-## Cómo funciona
+## Cómo se usa
 
-1. **Sube.** Un CSV o Excel con las mediciones. Si trae una columna de muestra o subgrupo, arma la gráfica X̄-R; si no, la de individuales.
-2. **Vigila.** Calcula los límites con un periodo estable y marca los puntos que rompen alguna de las cinco reglas: fuera de límite, tendencia, corrimiento…
-3. **Decide.** Te dice qué suele significar cada señal y si el proceso cabe en la tolerancia, con Cp, Cpk y las piezas que ya salieron.
+1. **Abre** un CSV o Excel (Ctrl+O), o arrástralo a la ventana. La app adivina qué columna es la medición y cuál agrupa las piezas; si hay subgrupos arma X̄-R, si no, individuales.
+2. **Pon la tolerancia** y con cuántas muestras calcular los límites (un periodo estable).
+3. **Revisa**: el veredicto arriba, las señales a la derecha. Un clic en una señal o en un punto lo marca en las dos gráficas; con las flechas te mueves entre puntos.
+4. **Exporta** el reporte como imagen (Ctrl+E) o las señales en CSV para el turno.
 
-## Qué hay adentro
+## Cómo está hecha
 
 | Archivo | Qué hace |
 | --- | --- |
-| `src/spc-logic.ts` | Límites de control (constantes de Shewhart), las cinco reglas de Western Electric, Cp/Cpk/Pp/Ppk y el veredicto en palabras. Sin interfaz, con pruebas. |
-| `src/Spc.tsx` | Subir mediciones, elegir columna, subgrupo y tolerancia; la gráfica de promedios y la de rangos en SVG, las señales con qué revisar y el histograma contra la tolerancia. |
-| `src/csv.ts` | Lector de CSV compartido con el analizador. |
+| `spc/logica.py` | Límites de control (constantes de Shewhart), las cinco reglas de Western Electric, Cp/Cpk/Pp/Ppk y el veredicto en palabras. Sin interfaz. |
+| `spc/datos.py` | Lee CSV (coma, punto y coma o tabulador; decimales con coma) y Excel; adivina la columna medida y la de subgrupo. |
+| `spc/graficas.py` | Las gráficas dibujadas a mano con `QPainter`: periodo base sombreado, zonas de 1σ y 2σ, puntos marcados, tooltip por punto y selección compartida entre las dos gráficas. |
+| `spc/ventana.py` | La ventana: panel de datos, veredicto con Cp/Cpk/Ppk, señales agrupadas por punto con qué revisar, histograma contra la tolerancia, arrastrar y soltar, exportar. |
+| `spc/tema.py` | Colores y hoja de estilo (QSS). |
+| `tools/captura.py` | Saca la captura del README sin abrir ventanas (Qt en modo `offscreen`). |
+| `tools/icono.py` | Dibuja el icono con el mismo `QPainter`. |
 
-La lógica está separada de la interfaz, así se prueba sin navegador (`tests/`).
+### Decisiones
 
-## Decisiones
+- **Nativa, no web.** Python con Qt (PySide6): arranca como programa de Windows, trabaja sin internet y los datos no salen de la computadora.
+- **Gráficas propias en vez de una librería de gráficas.** Así cada línea, zona y marca dice exactamente lo que el supervisor necesita ver, y la app pesa menos.
+- **Los límites pueden salir de un periodo base.** Si el cálculo incluye el problema, los límites se abren y lo esconden; hay una prueba que lo demuestra.
+- **Control y capacidad por separado.** Un proceso puede avisar que cambió y todavía cumplir la tolerancia; el veredicto lo dice así.
+- **Una señal por punto.** Si un punto rompe tres reglas, es una sola tarjeta con las tres, y lo que revisar sale de la más grave.
 
-- Con columna de muestra o subgrupo se arma X̄-R; sin ella, individuales y rango móvil (I-MR).
-- Los límites pueden salir de un periodo base: si el cálculo incluye el problema, los límites se abren y lo esconden.
-- Cp/Cpk usan la variación de corto plazo (la de la gráfica) y Pp/Ppk la total.
-- Control y capacidad se reportan aparte: un proceso puede avisar que cambió y todavía cumplir la tolerancia.
-
-## Correrlo
+## Correrlo desde el código
 
 ```bash
-npm install
-npm run dev
+pip install -r requirements.txt
+python main.py                 # o: python main.py mediciones.csv
 ```
 
 ```bash
-npm test        # pruebas de la lógica (node:test)
-npm run build   # tipos + build de producción
+pip install pytest
+pytest                         # lógica, lectura de archivos y la ventana sin pantalla
 ```
 
-Hecho con React 19, TypeScript y Vite. Necesita Node 22 o más nuevo (las pruebas corren TypeScript directo con Node).
+Armar el `.exe`: `pip install -r requirements-dev.txt` y el comando de `.github/workflows/release.yml`. Al subir una etiqueta `v*`, GitHub Actions lo arma y lo publica solo.
 
-## Lo que sigue
+## Versión web
 
-- Gráficas p y c para defectos por atributo.
-- Exportar la gráfica como imagen para el reporte del turno.
+En `web/` está la misma herramienta para el navegador (React + TypeScript), la que se prueba en el [portafolio](https://bruno-portfolio-azure.vercel.app/proyectos/graficas-de-control). Las dos dan los mismos resultados: el ejemplo del buje genera las mismas 125 mediciones byte a byte y una prueba lo vigila.
 
 ---
 
