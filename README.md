@@ -61,6 +61,10 @@ Armar el `.exe`: `pip install -r requirements-dev.txt` y el comando de `.github/
 
 En `web/` está la misma herramienta para el navegador (React + TypeScript), la que se prueba en el [portafolio](https://bruno-portfolio-azure.vercel.app/proyectos/graficas-de-control). Las dos dan los mismos resultados: el ejemplo del buje genera las mismas 125 mediciones byte a byte y una prueba lo vigila.
 
+## Licencia
+
+[MIT](LICENSE). Úsalo, cámbialo y compártelo; sólo conserva el aviso de copyright.
+
 ---
 
 Parte del [portafolio de Bruno Salas](https://bruno-portfolio-azure.vercel.app) · [GitHub](https://github.com/Brunich)
